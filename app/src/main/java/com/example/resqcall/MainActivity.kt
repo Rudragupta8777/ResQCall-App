@@ -460,38 +460,69 @@ class MainActivity : AppCompatActivity() {
                 SmsManager.getDefault()
             }
 
-            // First send an initial emergency message
-            val emergencyMessage = "🚨 SOS ALERT! I need help immediately! A fall has been detected at my location. Emergency services may be required."
-            smsManager.sendTextMessage(contactNumber, null, emergencyMessage, null, null)
-            Log.d(TAG, "Initial emergency SMS sent")
+            // Define the emergency message with emoji
+            val emergencyMessage = "🚨 SOS ALERT! I need help immediately! A fall has been detected. Emergency services may be required."
+
+            // Send the emergency message using multipart to handle emoji
+            try {
+                val emergencyParts = smsManager.divideMessage(emergencyMessage)
+                smsManager.sendMultipartTextMessage(contactNumber, null, emergencyParts, null, null)
+                Log.d(TAG, "Initial emergency SMS sent: $emergencyMessage")
+
+                // Add a confirmation toast for the first message
+                runOnUiThread {
+                    Toast.makeText(this, "Emergency alert sent", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send multipart message with emoji, trying plain text", e)
+                // Fallback to plain text if emoji fails
+                val plainEmergencyMessage = "SOS ALERT! I need help immediately! A fall has been detected at my location. Emergency services may be required."
+                smsManager.sendTextMessage(contactNumber, null, plainEmergencyMessage, null, null)
+            }
 
             // Then get and send location in a separate SMS
             getCurrentLocation { location ->
                 if (location != null) {
                     // Create a Google Maps link with the coordinates
                     val mapLink = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
-                    val locationMessage = "My exact location (fall detected): $mapLink"
+                    val locationMessage = "🚨 My exact location : $mapLink"
 
-                    // Send the location as a direct SMS (no user interaction required)
-                    smsManager.sendTextMessage(contactNumber, null, locationMessage, null, null)
-                    Log.d(TAG, "Location SMS sent with coordinates: ${location.latitude}, ${location.longitude}")
+                    try {
+                        // Send the location with emoji using multipart message
+                        val locationParts = smsManager.divideMessage(locationMessage)
+                        smsManager.sendMultipartTextMessage(contactNumber, null, locationParts, null, null)
+                        Log.d(TAG, "Location SMS with emoji sent: $locationMessage")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to send location SMS with emoji, trying plain text", e)
+                        // Fallback to plain text if emoji fails
+                        val plainLocationMessage = "SOS ALERT! I need help immediately! My exact location (fall detected): $mapLink"
+                        smsManager.sendTextMessage(contactNumber, null, plainLocationMessage, null, null)
+                        Log.d(TAG, "Plain location SMS sent as fallback")
+                    }
                 } else {
                     // Location not available, send basic SMS
-                    smsManager.sendTextMessage(contactNumber, null,
-                        "Fall detected! Location unavailable. Please call me immediately!", null, null)
+                    try {
+                        val fallbackMessage = "🚨 Fall detected! Location unavailable. Please call me immediately!"
+                        val fallbackParts = smsManager.divideMessage(fallbackMessage)
+                        smsManager.sendMultipartTextMessage(contactNumber, null, fallbackParts, null, null)
+                    } catch (e: Exception) {
+                        // Try without emoji if that fails
+                        val plainFallbackMessage = "Fall detected! Location unavailable. Please call me immediately!"
+                        smsManager.sendTextMessage(contactNumber, null, plainFallbackMessage, null, null)
+                    }
                     Log.d(TAG, "Location unavailable - sent basic SMS")
                 }
 
                 // Toast on the main thread to confirm messages are sent
                 runOnUiThread {
-                    Toast.makeText(this, "Emergency messages sent", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Location information sent", Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in sending emergency messages", e)
             Toast.makeText(this, "Failed to send messages: ${e.message}", Toast.LENGTH_SHORT).show()
 
-            // Fallback to simple SMS
+            // Fallback to simple SMS with no special characters
             try {
                 val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     this.getSystemService(SmsManager::class.java)
@@ -500,6 +531,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 smsManager.sendTextMessage(contactNumber, null,
                     "EMERGENCY! Fall detected! Please call me immediately!", null, null)
+                Log.d(TAG, "Fallback emergency SMS sent")
             } catch (ex: Exception) {
                 Log.e(TAG, "Even fallback SMS failed", ex)
             }
