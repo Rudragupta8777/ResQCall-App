@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private var bluetoothThread: Thread? = null
     private var inputStream: InputStream? = null
 
-    // Activity launchers
     private val contactPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -77,10 +76,8 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            // Bluetooth was enabled
             showPairedDevices()
         } else {
-            // User refused to enable Bluetooth
             Toast.makeText(this, "Bluetooth is required for fall detection", Toast.LENGTH_SHORT).show()
         }
     }
@@ -94,7 +91,6 @@ class MainActivity : AppCompatActivity() {
         waveView = findViewById(R.id.waveView)
         btnSelectContact = findViewById(R.id.btnSelectContact)
 
-        // Add button for selecting Bluetooth device
         btnSelectDevice = findViewById(R.id.btnSelectDevice)
 
         btnStop.setOnClickListener { stopSOS() }
@@ -303,17 +299,14 @@ class MainActivity : AppCompatActivity() {
             // Keep listening to the InputStream
             while (isConnected) {
                 try {
-                    // Read from the InputStream
                     bytes = inputStream?.read(buffer) ?: -1
 
                     if (bytes > 0) {
-                        // Convert bytes to string
                         val message = String(buffer, 0, bytes)
                         Log.d(TAG, "Received: $message")
 
                         // Check if impact is detected
                         if (message.contains("IMPACT_DETECTED", ignoreCase = true)) {
-                            // Update UI on the main thread
                             runOnUiThread {
                                 Toast.makeText(this, "Fall detected! Starting emergency protocol.", Toast.LENGTH_LONG).show()
                                 startSOS() // This will now be triggered only by ESP32
@@ -359,11 +352,8 @@ class MainActivity : AppCompatActivity() {
 
             override fun onFinish() {
                 txtTimer.text = "Calling Help!"
-
-                // Stop alarm before proceeding with emergency contact
                 stopAlarmOnly()
 
-                // Send location-sharing SMS
                 sendLocationSharingMessage(emergencyContact!!)
 
                 // Small delay before making the call
