@@ -28,9 +28,8 @@ ResQCall is an **Android emergency response app** that helps users **quickly cal
 
 ## 🛠️ Tech Stack
 
-- **Language:** Kotlin / Java  
+- **Language:** Kotlin (Android)
 - **Android SDK**  
-- **Firebase (Optional for Cloud Features)**  
 - **Permissions Used:**  
   - `CALL_PHONE` → To make emergency calls  
   - `SEND_SMS` → To send emergency messages  
