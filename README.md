@@ -36,10 +36,3 @@ ResQCall is an **Android emergency response app** that helps users **quickly cal
   - `READ_CONTACTS` → To select an emergency contact  
 
 ---
-
-## ⚡ Setup Instructions
-
-### 🔹 Clone the Repository
-```sh
-git clone https://github.com/your-username/ResQCall.git
-cd ResQCall
