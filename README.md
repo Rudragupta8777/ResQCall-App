@@ -34,5 +34,3 @@ ResQCall is an **Android emergency response app** that helps users **quickly cal
   - `CALL_PHONE` → To make emergency calls  
   - `SEND_SMS` → To send emergency messages  
   - `READ_CONTACTS` → To select an emergency contact  
-
----
