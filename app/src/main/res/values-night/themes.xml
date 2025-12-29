@@ -3,5 +3,21 @@
     <style name="Base.Theme.ResQCall" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">#2196F3</item>
+        <item name="colorSecondary">#FF9800</item>
+        <item name="android:windowBackground">#121212</item>
+        <item name="android:statusBarColor">#121212</item>
+    </style>
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#121212</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+        <item name="postSplashScreenTheme">@style/Base.Theme.ResQCall</item>
+    </style>
+
+    <style name="Theme_ResQcall_DarkDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="android:background">#1E1E1E</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorPrimary">#2196F3</item> <item name="colorOnSurface">#FFFFFF</item>
     </style>
 </resources>
