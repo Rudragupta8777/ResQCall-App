@@ -60,12 +60,7 @@ class DashboardActivity : AppCompatActivity() {
         loadingProgress = findViewById(R.id.loadingProgress)
         swipeRefresh = findViewById(R.id.swipeRefresh)
 
-        // Setup Pull-to-Refresh
-        swipeRefresh.setOnRefreshListener {
-            fetchUserStatus()
-        }
-
-        // Optional: Customize SwipeRefresh colors to match your theme
+        swipeRefresh.setOnRefreshListener { fetchUserStatus() }
         swipeRefresh.setColorSchemeColors(Color.parseColor("#2196F3"))
         swipeRefresh.setProgressBackgroundColorSchemeColor(Color.parseColor("#1E1E1E"))
 
@@ -81,28 +76,105 @@ class DashboardActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btnLogout)?.setOnClickListener { performLogout() }
 
-        adapter = WearerAdapter(monitoredList,
-            onLongClick = { item -> showRenameDialog(item) },
+        // Setup Adapter with 5 parameters matching your updated WearerAdapter constructor
+        adapter = WearerAdapter(
+            monitoredList,
+            onLongClick = { item -> showManagementMenu(item) }, // Now opens a Menu (Edit/Delete)
             onResolve = { item -> confirmResolution(item) },
-            onDirections = { lat, lon -> openGoogleMaps(lat, lon) }
+            onDirections = { lat, lon -> openGoogleMaps(lat, lon) },
+            onCardClick = { item -> navigateToHistory(item) }   // Single tap opens History
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
 
-    private fun requestAppPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+    // --- NEW: MANAGEMENT MENU (Edit vs Delete) ---
+    private fun showManagementMenu(item: MonitoredUser) {
+        if (userRole != "caregiver") return
+
+        val options = arrayOf("Edit Nickname", "Stop Monitoring (Remove)")
+
+        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
+            .setTitle("Manage ${item.nickname ?: item.wearer.name}")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showRenameDialog(item)
+                    1 -> confirmDeletion(item)
+                }
+            }
+            .show()
+    }
+
+    private fun confirmDeletion(item: MonitoredUser) {
+        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
+            .setTitle("Stop Monitoring?")
+            .setMessage("Are you sure you want to remove ${item.nickname ?: item.wearer.name}? You will no longer receive their alerts.")
+            .setPositiveButton("Remove") { _, _ ->
+                deleteWearerFromServer(item.wearer._id)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun deleteWearerFromServer(wearerId: String) {
+        val caregiverUid = Firebase.auth.currentUser?.uid ?: return
+        loadingProgress.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.instance.removeWearer(RemoveWearerRequest(caregiverUid, wearerId))
+                if (response.isSuccessful) {
+                    Toast.makeText(this@DashboardActivity, "Removed successfully", Toast.LENGTH_SHORT).show()
+                    fetchUserStatus()
+                } else {
+                    loadingProgress.visibility = View.GONE
+                    Toast.makeText(this@DashboardActivity, "Failed to remove", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                loadingProgress.visibility = View.GONE
+                Log.e("Delete", "Error: ${e.message}")
+            }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            startActivity(intent)
+    }
+
+    private fun navigateToHistory(item: MonitoredUser) {
+        val intent = Intent(this, HistoryActivity::class.java).apply {
+            putExtra("WEARER_ID", item.wearer._id)
+            putExtra("WEARER_NAME", item.nickname ?: item.wearer.name)
+        }
+        startActivity(intent)
+    }
+
+    private fun setupSocketConnection() {
+        try {
+            // Using Base URL from RetrofitClient as requested
+            mSocket = IO.socket(RetrofitClient.BASE_URL)
+            mSocket.connect()
+
+            mSocket.on("device_status") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    runOnUiThread {
+                        val wearerId = data.getString("wearerId")
+                        val status = data.optString("status", "online")
+                        if (status == "offline") {
+                            fetchUserStatus() // Refresh to show offline state
+                        } else {
+                            adapter.updateBattery(wearerId, data.getInt("battery"))
+                        }
+                    }
+                }
+            }
+
+            mSocket.on("new_alert") { runOnUiThread { fetchUserStatus() } }
+            mSocket.on("alert_resolved") { runOnUiThread { fetchUserStatus() } }
+
+        } catch (e: Exception) {
+            Log.e("Socket", "Connection error: ${e.message}")
         }
     }
 
     private fun fetchUserStatus() {
-        // Show LinearProgress only if it's NOT a pull-to-refresh action
         if (!swipeRefresh.isRefreshing) {
             loadingProgress.visibility = View.VISIBLE
         }
@@ -116,7 +188,6 @@ class DashboardActivity : AppCompatActivity() {
                         try {
                             val response = RetrofitClient.instance.syncUser(AuthRequest(idToken, fcmToken))
 
-                            // Hide both indicators
                             loadingProgress.visibility = View.GONE
                             swipeRefresh.isRefreshing = false
 
@@ -150,88 +221,6 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmResolution(item: MonitoredUser) {
-        val alertId = item.activeAlert?._id
-        if (alertId == null) {
-            Toast.makeText(this, "No active alert found", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
-            .setTitle("Confirm Safety")
-            .setMessage("Is the wearer safe now?")
-            .setPositiveButton("Yes, Resolved") { _, _ ->
-                resolveAlertOnServer(alertId)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun resolveAlertOnServer(alertId: String) {
-        loadingProgress.visibility = View.VISIBLE
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.instance.resolveAlert(ResolveRequest(alertId))
-                if (response.isSuccessful) {
-                    Toast.makeText(this@DashboardActivity, "Alert Resolved", Toast.LENGTH_SHORT).show()
-                    fetchUserStatus()
-                } else {
-                    loadingProgress.visibility = View.GONE
-                }
-            } catch (e: Exception) {
-                loadingProgress.visibility = View.GONE
-                Toast.makeText(this@DashboardActivity, "Resolution failed", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun setupSocketConnection() {
-        try {
-            mSocket = IO.socket("https://7237b85ffa34.ngrok-free.app/")
-            mSocket.connect()
-
-            mSocket.on("device_status") { args ->
-                if (args.isNotEmpty()) {
-                    val data = args[0] as JSONObject
-                    runOnUiThread {
-                        adapter.updateBattery(data.getString("wearerId"), data.getInt("battery"))
-                    }
-                }
-            }
-
-            mSocket.on("new_alert") { runOnUiThread { fetchUserStatus() } }
-            mSocket.on("alert_resolved") { runOnUiThread { fetchUserStatus() } }
-
-        } catch (e: Exception) {
-            Log.e("Socket", "Connection error: ${e.message}")
-        }
-    }
-
-    private fun openGoogleMaps(lat: Double, lon: Double) {
-        val gmmIntentUri = Uri.parse("google.navigation:q=$lat,$lon")
-        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-        mapIntent.setPackage("com.google.android.apps.maps")
-        if (mapIntent.resolveActivity(packageManager) != null) {
-            startActivity(mapIntent)
-        } else {
-            Toast.makeText(this, "Google Maps not found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun performLogout() {
-        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
-            .setTitle("Logout")
-            .setMessage("Are you sure you want to logout?")
-            .setPositiveButton("Logout") { _, _ ->
-                Firebase.auth.signOut()
-                if (::mSocket.isInitialized) mSocket.disconnect()
-                startActivity(Intent(this, LoginActivity::class.java))
-                finish()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
     private fun showRenameDialog(item: MonitoredUser) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_rename, null)
         val editText = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.nicknameEditText)
@@ -257,6 +246,64 @@ class DashboardActivity : AppCompatActivity() {
                 Toast.makeText(this@DashboardActivity, "Rename failed", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun confirmResolution(item: MonitoredUser) {
+        val alertId = item.activeAlert?._id ?: return
+        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
+            .setTitle("Confirm Safety")
+            .setMessage("Is the wearer safe now?")
+            .setPositiveButton("Yes, Resolved") { _, _ -> resolveAlertOnServer(alertId) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun resolveAlertOnServer(alertId: String) {
+        loadingProgress.visibility = View.VISIBLE
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.instance.resolveAlert(ResolveRequest(alertId))
+                if (response.isSuccessful) {
+                    Toast.makeText(this@DashboardActivity, "Alert Resolved", Toast.LENGTH_SHORT).show()
+                    fetchUserStatus()
+                } else {
+                    loadingProgress.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                loadingProgress.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun requestAppPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivity(intent)
+        }
+    }
+
+    private fun openGoogleMaps(lat: Double, lon: Double) {
+        val gmmIntentUri = Uri.parse("google.navigation:q=$lat,$lon")
+        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+        mapIntent.setPackage("com.google.android.apps.maps")
+        startActivity(mapIntent)
+    }
+
+    private fun performLogout() {
+        MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Logout") { _, _ ->
+                Firebase.auth.signOut()
+                if (::mSocket.isInitialized) mSocket.disconnect()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun subscribeToSocketRoom(roomId: String) {
