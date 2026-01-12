@@ -1,17 +1,10 @@
 package com.example.resqcall.api
 
-import com.example.resqcall.data.AddCaregiverRequest
-import com.example.resqcall.data.AuthRequest
-import com.example.resqcall.data.PairRequest
-import com.example.resqcall.data.RenameRequest
-import com.example.resqcall.data.ResolveRequest
-import com.example.resqcall.data.RoleRequest
-import com.example.resqcall.data.UserResponse
+import com.example.resqcall.data.*
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.POST
+import retrofit2.http.*
 
-interface ResQcallApi {
+interface Api {
     @POST("api/auth/sync-user")
     suspend fun syncUser(@Body request: AuthRequest): Response<UserResponse>
 
@@ -29,4 +22,10 @@ interface ResQcallApi {
 
     @POST("api/auth/rename-wearer")
     suspend fun renameWearer(@Body request: RenameRequest): Response<Unit>
+
+    @GET("api/emergency/history/{wearerId}")
+    suspend fun getAlertHistory(@Path("wearerId") wearerId: String): Response<List<AlertData>>
+
+    @HTTP(method = "DELETE", path = "api/auth/remove-wearer", hasBody = true)
+    suspend fun removeWearer(@Body request: RemoveWearerRequest): Response<Unit>
 }

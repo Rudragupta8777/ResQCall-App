@@ -16,7 +16,8 @@ class WearerAdapter(
     private val items: MutableList<MonitoredUser>,
     private val onLongClick: (MonitoredUser) -> Unit,
     private val onResolve: (MonitoredUser) -> Unit,
-    private val onDirections: (Double, Double) -> Unit
+    private val onDirections: (Double, Double) -> Unit,
+    private val onCardClick: (MonitoredUser) -> Unit // Added this parameter
 ) : RecyclerView.Adapter<WearerAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -43,7 +44,7 @@ class WearerAdapter(
         // Handle Active Alert UI State
         if (item.activeAlert != null && !item.activeAlert.resolved) {
             holder.emergencyActions.visibility = View.VISIBLE
-            holder.card.setCardBackgroundColor(Color.parseColor("#44FF5252")) // Red tint for emergency
+            holder.card.setCardBackgroundColor(Color.parseColor("#44FF5252"))
             holder.pulseDot.setBackgroundResource(R.drawable.circle_red)
         } else {
             holder.emergencyActions.visibility = View.GONE
@@ -60,6 +61,9 @@ class WearerAdapter(
             }
             holder.pulseDot.startAnimation(anim)
         }
+
+        // SET CLICK LISTENER FOR THE CARD
+        holder.itemView.setOnClickListener { onCardClick(item) }
 
         // Click Listeners
         holder.itemView.setOnLongClickListener {
@@ -84,15 +88,7 @@ class WearerAdapter(
                 myWearable = currentItem.wearer.myWearable?.copy(batteryLevel = newLevel)
             )
             items[index] = currentItem.copy(wearer = updatedWearer)
-            notifyItemChanged(index, newLevel)
-        }
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isNotEmpty()) {
-            holder.battery.text = "${payloads[0]}%"
-        } else {
-            super.onBindViewHolder(holder, position, payloads)
+            notifyItemChanged(index)
         }
     }
 

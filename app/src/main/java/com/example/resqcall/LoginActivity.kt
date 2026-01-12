@@ -55,7 +55,6 @@ class LoginActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // The result is a GetCredentialResponse, not the credential itself
                 val result: GetCredentialResponse = credentialManager.getCredential(this@LoginActivity, request)
                 handleSignIn(result.credential)
             } catch (e: Exception) {
@@ -72,10 +71,10 @@ class LoginActivity : AppCompatActivity() {
 
                 val firebaseCredential = GoogleAuthProvider.getCredential(idTokenFromGoogle, null)
 
-                // 1. Sign into Firebase
+                // 1. Sign in into Firebase
                 auth.signInWithCredential(firebaseCredential).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        // 2. GET THE FIREBASE ID TOKEN (The one the backend expects)
+                        // 2. Get the Firebase id token
                         val user = auth.currentUser
                         user?.getIdToken(true)?.addOnCompleteListener { tokenTask ->
                             if (tokenTask.isSuccessful) {
