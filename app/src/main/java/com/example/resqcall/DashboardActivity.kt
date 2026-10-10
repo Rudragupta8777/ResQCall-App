@@ -1,18 +1,19 @@
 package com.example.resqcall
 
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
@@ -29,6 +30,9 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
+import com.example.resqcall.util.showError
+import com.example.resqcall.util.showMessage
+import com.example.resqcall.util.showSuccess
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import io.socket.client.IO
@@ -84,8 +88,8 @@ class DashboardActivity : AppCompatActivity() {
             onLongClick = { item -> showManagementMenu(item) }, // Now opens a Menu (Edit/Delete)
             onResolve = { item -> confirmResolution(item) },
             onDirections = { lat, lon -> openGoogleMaps(lat, lon) },
-            onCardClick = { item -> navigateToHistory(item) },  // Single tap opens History
-            onVitals = { item -> navigateToVitals(item) }       // Tapping the BPM pill opens Vitals
+            onHistory = { item -> navigateToHistory(item) },    // "Fall History" action
+            onVitals = { item -> navigateToVitals(item) }       // "Health Vitals" action
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -127,11 +131,11 @@ class DashboardActivity : AppCompatActivity() {
             try {
                 val response = RetrofitClient.instance.removeWearer(RemoveWearerRequest(caregiverUid, wearerId))
                 if (response.isSuccessful) {
-                    Toast.makeText(this@DashboardActivity, "Removed successfully", Toast.LENGTH_SHORT).show()
+                    showSuccess("Removed successfully")
                     fetchUserStatus()
                 } else {
                     loadingProgress.visibility = View.GONE
-                    Toast.makeText(this@DashboardActivity, "Failed to remove", Toast.LENGTH_SHORT).show()
+                    showError("Failed to remove")
                 }
             } catch (e: Exception) {
                 loadingProgress.visibility = View.GONE
@@ -166,11 +170,20 @@ class DashboardActivity : AppCompatActivity() {
                 if (args.isNotEmpty()) {
                     val data = args[0] as JSONObject
                     runOnUiThread {
-                        val wearerId = data.getString("wearerId")
+                        // wearerId isn't guaranteed on every status payload (the offline-timeout
+                        // event in particular may only carry {"status":"offline"}), so this is
+                        // read defensively rather than assumed present.
+                        val wearerId = data.optString("wearerId")
                         val status = data.optString("status", "online")
                         if (status == "offline") {
-                            fetchUserStatus() // Refresh to show offline state
+                            if (wearerId.isNotEmpty()) {
+                                adapter.setOffline(wearerId, true)
+                            }
+                            fetchUserStatus() // Keep battery/monitoring list in sync too
                         } else {
+                            if (wearerId.isNotEmpty()) {
+                                adapter.setOffline(wearerId, false)
+                            }
                             if (data.has("battery")) {
                                 adapter.updateBattery(wearerId, data.getInt("battery"))
                             }
@@ -183,7 +196,25 @@ class DashboardActivity : AppCompatActivity() {
             }
 
             mSocket.on("new_alert") { runOnUiThread { fetchUserStatus() } }
-            mSocket.on("alert_resolved") { runOnUiThread { fetchUserStatus() } }
+
+            mSocket.on("alert_resolved") { args ->
+                if (args.isNotEmpty()) {
+                    val data = args[0] as JSONObject
+                    runOnUiThread {
+                        val wearerId = data.optString("wearerId")
+                        val resolvedByName = data.optJSONObject("resolvedBy")?.optString("name")
+                        // Clear the alert immediately so the card updates without waiting on
+                        // the network round-trip, then resync to pick up everything else.
+                        if (wearerId.isNotEmpty()) {
+                            adapter.clearActiveAlert(wearerId)
+                        }
+                        if (!resolvedByName.isNullOrEmpty()) {
+                            showSuccess("Alert resolved by $resolvedByName")
+                        }
+                        fetchUserStatus()
+                    }
+                }
+            }
 
         } catch (e: Exception) {
             Log.e("Socket", "Connection error: ${e.message}")
@@ -232,21 +263,13 @@ class DashboardActivity : AppCompatActivity() {
                                 // Backend rejected the token outright - the session is dead.
                                 redirectToLogin()
                             } else {
-                                Toast.makeText(
-                                    this@DashboardActivity,
-                                    "Couldn't load your data (${response.code()}). Pull to refresh.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                showError("Couldn't load your data (${response.code()}). Pull to refresh.")
                             }
                         } catch (e: Exception) {
                             loadingProgress.visibility = View.GONE
                             swipeRefresh.isRefreshing = false
                             Log.e("Dashboard", "Sync Error: ${e.message}")
-                            Toast.makeText(
-                                this@DashboardActivity,
-                                "Network error. Pull to refresh.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            showError("Network error. Pull to refresh.")
                         }
                     }
                 }
@@ -258,11 +281,7 @@ class DashboardActivity : AppCompatActivity() {
                     // Token refresh was explicitly rejected - the session expired or was revoked.
                     redirectToLogin()
                 } else {
-                    Toast.makeText(
-                        this@DashboardActivity,
-                        "Couldn't verify your session. Pull to refresh.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showError("Couldn't verify your session. Pull to refresh.")
                 }
             }
         }
@@ -299,7 +318,7 @@ class DashboardActivity : AppCompatActivity() {
                 val response = RetrofitClient.instance.renameWearer(RenameRequest(caregiverUid, wearerId, nickname))
                 if (response.isSuccessful) fetchUserStatus()
             } catch (e: Exception) {
-                Toast.makeText(this@DashboardActivity, "Rename failed", Toast.LENGTH_SHORT).show()
+                showError("Rename failed")
             }
         }
     }
@@ -315,12 +334,13 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun resolveAlertOnServer(alertId: String) {
+        val caregiverUid = Firebase.auth.currentUser?.uid ?: return
         loadingProgress.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                val response = RetrofitClient.instance.resolveAlert(ResolveRequest(alertId))
+                val response = RetrofitClient.instance.resolveAlert(ResolveRequest(alertId, caregiverUid))
                 if (response.isSuccessful) {
-                    Toast.makeText(this@DashboardActivity, "Alert Resolved", Toast.LENGTH_SHORT).show()
+                    showSuccess("Alert Resolved")
                     fetchUserStatus()
                 } else {
                     loadingProgress.visibility = View.GONE
@@ -337,6 +357,25 @@ class DashboardActivity : AppCompatActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivity(intent)
+        }
+
+        // Android 14+ requires the user to explicitly allow full-screen intent notifications
+        // per-app - without this, the emergency alert silently falls back to a normal
+        // notification instead of launching EmergencyActivity over the lock screen/closed app.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            if (!notificationManager.canUseFullScreenIntent()) {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:$packageName"))
+                startActivity(intent)
+            }
+        }
+
+        // Aggressive OEM battery optimization can kill the app before FCM wakes it to show the
+        // emergency alert - request an exemption so fall alerts reliably arrive when closed.
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
             startActivity(intent)
         }
     }
@@ -386,7 +425,7 @@ class DashboardActivity : AppCompatActivity() {
             try {
                 val response = RetrofitClient.instance.addCaregiver(AddCaregiverRequest(wearerUid, caregiverUid))
                 if (response.isSuccessful) {
-                    Toast.makeText(this@DashboardActivity, "Linked!", Toast.LENGTH_SHORT).show()
+                    showSuccess("Linked!")
                     fetchUserStatus()
                 }
             } catch (e: Exception) {
@@ -399,12 +438,13 @@ class DashboardActivity : AppCompatActivity() {
         val myUid = Firebase.auth.currentUser?.uid ?: return
         try {
             val bitmap = generateQRCode(myUid)
-            val imageView = ImageView(this).apply {
-                setPadding(64, 64, 64, 64)
-                setImageBitmap(bitmap)
-                setBackgroundColor(Color.WHITE)
-            }
-            AlertDialog.Builder(this).setTitle("Pair Caregiver").setView(imageView).show()
+            val dialogView = layoutInflater.inflate(R.layout.dialog_qr_code, null)
+            dialogView.findViewById<ImageView>(R.id.qrImageView).setImageBitmap(bitmap)
+
+            MaterialAlertDialogBuilder(this, R.style.Theme_ResQcall_DarkDialog)
+                .setView(dialogView)
+                .setPositiveButton("Done", null)
+                .show()
         } catch (e: Exception) { e.printStackTrace() }
     }
 

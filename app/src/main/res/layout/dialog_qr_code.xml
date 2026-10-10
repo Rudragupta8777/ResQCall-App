@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="24dp"
+    android:background="@color/surface">
+
+    <FrameLayout
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="14dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/circle_primary_container" />
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:src="@drawable/qr_code"
+            app:tint="@color/primary" />
+    </FrameLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your Pairing Code"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:fontFamily="@font/poppins_semibold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
+        android:text="Ask your caregiver to scan this from their Dashboard"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/outline"
+        app:strokeWidth="1dp">
+
+        <ImageView
+            android:id="@+id/qrImageView"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:padding="16dp"
+            android:scaleType="fitCenter" />
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

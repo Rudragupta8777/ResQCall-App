@@ -6,12 +6,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.resqcall.api.RetrofitClient
 import com.example.resqcall.data.CriticalEvent
 import com.example.resqcall.data.VitalsDay
+import com.example.resqcall.util.showError
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
@@ -88,7 +88,7 @@ class VitalsActivity : AppCompatActivity() {
                 mapIntent.setPackage("com.google.android.apps.maps")
                 startActivity(mapIntent)
             } else {
-                Toast.makeText(this, "Location not available yet", Toast.LENGTH_SHORT).show()
+                showError("Location not available yet")
             }
         }
 
@@ -177,13 +177,13 @@ class VitalsActivity : AppCompatActivity() {
                         renderRangeChart(days)
                     }
                 } else {
-                    Toast.makeText(this@VitalsActivity, "Couldn't load vitals (${response.code()})", Toast.LENGTH_SHORT).show()
+                    showError("Couldn't load vitals (${response.code()})")
                     renderStats(emptyList())
                     renderCriticalEvents(emptyList())
                 }
             } catch (e: Exception) {
                 loading.visibility = View.GONE
-                Toast.makeText(this@VitalsActivity, "Network error loading vitals", Toast.LENGTH_SHORT).show()
+                showError("Network error loading vitals")
             }
         }
     }

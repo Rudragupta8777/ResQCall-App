@@ -9,8 +9,8 @@ import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.resqcall.util.showError
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -51,7 +51,7 @@ class EmergencyActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 startActivity(intent)
             } else {
-                Toast.makeText(this, "No phone number available", Toast.LENGTH_SHORT).show()
+                showError("No phone number available")
             }
         }
 

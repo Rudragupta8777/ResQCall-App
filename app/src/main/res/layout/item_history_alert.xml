@@ -10,57 +10,148 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
         app:cardBackgroundColor="@color/surface"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="0dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="1dp"
         app:strokeColor="@color/outline"
         app:strokeWidth="1dp">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cardContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:foreground="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
             android:padding="18dp">
 
-            <TextView
-                android:id="@+id/alertDate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Jan 12, 2026 • 10:30 PM"
-                android:textColor="@color/text_tertiary"
-                android:textSize="12sp" />
-
-            <TextView
+            <LinearLayout
                 android:id="@+id/alertStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🚨 Fall Detected"
-                android:textColor="@color/error_red"
-                android:textSize="17sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/poppins_semibold"
-                android:layout_marginTop="6dp"/>
+                android:background="@drawable/pill_error_container"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
-            <TextView
-                android:id="@+id/resolvedByText"
+                <ImageView
+                    android:id="@+id/alertStatusIcon"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_warning"
+                    app:tint="@color/error_red" />
+
+                <TextView
+                    android:id="@+id/alertStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Fall Detected"
+                    android:textColor="@color/error_red"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/poppins_semibold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/dateRow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical|end"
+                android:orientation="horizontal"
+                app:layout_constraintStart_toEndOf="@id/alertStatus"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/alertStatus"
+                app:layout_constraintBottom_toBottomOf="@id/alertStatus">
+
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:layout_marginStart="10dp"
+                    android:src="@drawable/ic_clock"
+                    app:tint="@color/text_tertiary" />
+
+                <TextView
+                    android:id="@+id/alertDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:text="Jan 12, 2026 • 10:30 PM"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/resolvedByRow"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Resolved by: John Doe"
-                android:textColor="@color/success_green"
-                android:textSize="13sp"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/alertStatus">
 
-            <Button
-                android:id="@+id/btnViewLocation"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                <ImageView
+                    android:layout_width="13dp"
+                    android:layout_height="13dp"
+                    android:src="@drawable/ic_person"
+                    app:tint="@color/success_green" />
+
+                <TextView
+                    android:id="@+id/resolvedByText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Resolved by Caregiver"
+                    android:textColor="@color/success_green"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/poppins_medium" />
+            </LinearLayout>
+
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/historyContentBarrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:layout_marginStart="-8dp"
-                android:text="View Location"
-                android:textColor="@color/primary"
-                app:icon="@drawable/location"
-                app:iconTint="@color/primary"/>
-        </LinearLayout>
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="alertStatus,resolvedByRow" />
+
+            <LinearLayout
+                android:id="@+id/locationRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/historyContentBarrier"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="@color/outline" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewLocation"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="View Location"
+                    android:textSize="13sp"
+                    android:textAllCaps="false"
+                    android:letterSpacing="0"
+                    android:fontFamily="@font/poppins_medium"
+                    android:textColor="@color/primary"
+                    app:icon="@drawable/location"
+                    app:iconTint="@color/primary"
+                    app:iconGravity="textStart"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="@color/primary" />
+            </LinearLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

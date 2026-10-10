@@ -46,7 +46,7 @@
 
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_splash</item>
         <item name="postSplashScreenTheme">@style/Base.Theme.ResQCall</item>
     </style>
 
@@ -55,5 +55,26 @@
         <item name="colorSurface">@color/surface</item>
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
+        <item name="fontFamily">@font/poppins_regular</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.ResQCall.Dialog</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/ResQCall.Dialog.Title</item>
+        <item name="buttonBarPositiveButtonStyle">@style/ResQCall.Dialog.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/ResQCall.Dialog.Button</item>
+    </style>
+
+    <style name="ShapeAppearance.ResQCall.Dialog" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerSize">24dp</item>
+    </style>
+
+    <style name="ResQCall.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:fontFamily">@font/poppins_semibold</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+    </style>
+
+    <style name="ResQCall.Dialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:fontFamily">@font/poppins_medium</item>
+        <item name="android:textColor">@color/primary</item>
     </style>
 </resources>

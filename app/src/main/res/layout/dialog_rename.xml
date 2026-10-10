@@ -7,15 +7,41 @@
     android:padding="24dp"
     android:background="@color/surface">
 
+    <FrameLayout
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginBottom="14dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/circle_primary_container" />
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/primary" />
+    </FrameLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:text="Set Nickname"
         android:textColor="@color/text_primary"
         android:textSize="18sp"
-        android:textStyle="bold"
-        android:fontFamily="@font/poppins_semibold"
-        android:layout_marginBottom="16dp"/>
+        android:fontFamily="@font/poppins_semibold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="18dp"
+        android:text="Give this wearer a name you'll recognize."
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/nicknameInputLayout"
@@ -31,6 +57,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
+            android:fontFamily="@font/poppins_regular"
             android:inputType="textCapSentences" />
     </com.google.android.material.textfield.TextInputLayout>
 

@@ -4,11 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.resqcall.api.RetrofitClient
 import com.example.resqcall.data.PairRequest
+import com.example.resqcall.util.showError
+import com.example.resqcall.util.showSuccess
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -41,14 +42,14 @@ class PairActivity : AppCompatActivity() {
             try {
                 val response = RetrofitClient.instance.pairDevice(request)
                 if (response.isSuccessful) {
-                    Toast.makeText(this@PairActivity, "Successfully Paired!", Toast.LENGTH_SHORT).show()
+                    showSuccess("Successfully Paired!")
                     startActivity(Intent(this@PairActivity, DashboardActivity::class.java))
                     finish()
                 } else {
-                    Toast.makeText(this@PairActivity, "Invalid ID or PIN", Toast.LENGTH_SHORT).show()
+                    showError("Invalid ID or PIN")
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@PairActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                showError("Error: ${e.message}")
             }
         }
     }

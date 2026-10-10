@@ -8,13 +8,13 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.resqcall.util.showError
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.ExecutorService
@@ -61,7 +61,7 @@ class ScannerActivity : AppCompatActivity() {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show()
+                showError("Camera permission denied")
                 finish()
             }
         }

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.credentials.Credential
 import androidx.credentials.CredentialManager
@@ -14,6 +13,7 @@ import androidx.credentials.GetCredentialResponse
 import androidx.lifecycle.lifecycleScope
 import com.example.resqcall.api.RetrofitClient
 import com.example.resqcall.data.AuthRequest
+import com.example.resqcall.util.showError
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -71,7 +71,7 @@ class LoginActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 Log.e("Auth", "Login Failed: ${e.message}")
                 setLoading(false)
-                Toast.makeText(this@LoginActivity, "Sign-in cancelled or failed. Please try again.", Toast.LENGTH_SHORT).show()
+                showError("Sign-in cancelled or failed. Please try again.")
             }
         }
     }
@@ -99,18 +99,18 @@ class LoginActivity : AppCompatActivity() {
                                 }
                             } else {
                                 setLoading(false)
-                                Toast.makeText(this@LoginActivity, "Couldn't verify your account. Try again.", Toast.LENGTH_SHORT).show()
+                                showError("Couldn't verify your account. Try again.")
                             }
                         }
                     } else {
                         setLoading(false)
-                        Toast.makeText(this@LoginActivity, "Firebase sign-in failed. Try again.", Toast.LENGTH_SHORT).show()
+                        showError("Firebase sign-in failed. Try again.")
                     }
                 }
             } catch (e: Exception) {
                 Log.e("Auth", "Error: ${e.message}")
                 setLoading(false)
-                Toast.makeText(this@LoginActivity, "Sign-in failed. Try again.", Toast.LENGTH_SHORT).show()
+                showError("Sign-in failed. Try again.")
             }
         } else {
             setLoading(false)
@@ -150,12 +150,12 @@ class LoginActivity : AppCompatActivity() {
                         finish()
                     } else {
                         setLoading(false)
-                        Toast.makeText(this@LoginActivity, "Sync failed (${response.code()}). Please try again.", Toast.LENGTH_SHORT).show()
+                        showError("Sync failed (${response.code()}). Please try again.")
                     }
                 } catch (e: Exception) {
                     setLoading(false)
                     Log.e("Auth", "Network Error: ${e.message}")
-                    Toast.makeText(this@LoginActivity, "Sync failed. Please check internet.", Toast.LENGTH_SHORT).show()
+                    showError("Sync failed. Please check internet.")
                 }
             }
         }

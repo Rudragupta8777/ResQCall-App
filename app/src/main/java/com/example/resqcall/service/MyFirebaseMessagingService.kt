@@ -23,13 +23,20 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val body = remoteMessage.data["body"] ?: "Action required"
 
         when (type) {
-            "FALL_DETECTED", "DEVICE_OFFLINE" -> {
+            "FALL_DETECTED" -> {
                 val wearerName = remoteMessage.data["wearerName"] ?: "Someone"
                 val lat = remoteMessage.data["lat"] ?: "0.0"
                 val lon = remoteMessage.data["lon"] ?: "0.0"
                 val wearerPhone = remoteMessage.data["wearerPhone"] ?: ""
 
                 triggerEmergencySiren(title, body, wearerName, lat, lon, wearerPhone, type)
+            }
+            "DEVICE_OFFLINE" -> {
+                // Offline is informational, not a life-threatening emergency - it must never
+                // use the full-screen alarm siren reserved for FALL_DETECTED.
+                val lat = remoteMessage.data["lat"]?.toDoubleOrNull() ?: 0.0
+                val lon = remoteMessage.data["lon"]?.toDoubleOrNull() ?: 0.0
+                showDeviceOfflineAlert(title, body, lat, lon)
             }
             "BATTERY_LOW" -> {
                 showBatteryReminder(title, body)
@@ -76,6 +83,33 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setOngoing(true)
 
         notificationManager.notify(100, builder.build())
+    }
+
+    private fun showDeviceOfflineAlert(title: String, body: String, lat: Double, lon: Double) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "device_offline_channel"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Device Offline Alerts", NotificationManager.IMPORTANCE_DEFAULT)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        // Tapping the notification drops a pin at the device's last known location.
+        val mapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$lat,$lon(Last Known Location)"))
+        val pendingIntent = PendingIntent.getActivity(
+            this, System.currentTimeMillis().toInt(), mapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        notificationManager.notify(102, builder.build())
     }
 
     private fun showBatteryReminder(title: String, body: String) {

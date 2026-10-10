@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -12,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.resqcall.adapter.HistoryAdapter
 import com.example.resqcall.api.RetrofitClient
 import com.example.resqcall.data.AlertData
+import com.example.resqcall.util.showError
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.launch
 
@@ -53,7 +53,7 @@ class HistoryActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@HistoryActivity, "Error loading history", Toast.LENGTH_SHORT).show()
+                showError("Error loading history")
             }
         }
     }
