@@ -24,6 +24,8 @@ import com.example.resqcall.api.RetrofitClient
 import com.example.resqcall.data.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
@@ -61,8 +63,8 @@ class DashboardActivity : AppCompatActivity() {
         swipeRefresh = findViewById(R.id.swipeRefresh)
 
         swipeRefresh.setOnRefreshListener { fetchUserStatus() }
-        swipeRefresh.setColorSchemeColors(Color.parseColor("#2196F3"))
-        swipeRefresh.setProgressBackgroundColorSchemeColor(Color.parseColor("#1E1E1E"))
+        swipeRefresh.setColorSchemeColors(Color.parseColor("#0D9488"))
+        swipeRefresh.setProgressBackgroundColorSchemeColor(Color.parseColor("#FFFFFF"))
 
         requestAppPermissions()
         initViews()
@@ -82,7 +84,8 @@ class DashboardActivity : AppCompatActivity() {
             onLongClick = { item -> showManagementMenu(item) }, // Now opens a Menu (Edit/Delete)
             onResolve = { item -> confirmResolution(item) },
             onDirections = { lat, lon -> openGoogleMaps(lat, lon) },
-            onCardClick = { item -> navigateToHistory(item) }   // Single tap opens History
+            onCardClick = { item -> navigateToHistory(item) },  // Single tap opens History
+            onVitals = { item -> navigateToVitals(item) }       // Tapping the BPM pill opens Vitals
         )
 
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -145,6 +148,14 @@ class DashboardActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
+    private fun navigateToVitals(item: MonitoredUser) {
+        val intent = Intent(this, VitalsActivity::class.java).apply {
+            putExtra("WEARER_ID", item.wearer._id)
+            putExtra("WEARER_NAME", item.nickname ?: item.wearer.name)
+        }
+        startActivity(intent)
+    }
+
     private fun setupSocketConnection() {
         try {
             // Using Base URL from RetrofitClient as requested
@@ -160,7 +171,12 @@ class DashboardActivity : AppCompatActivity() {
                         if (status == "offline") {
                             fetchUserStatus() // Refresh to show offline state
                         } else {
-                            adapter.updateBattery(wearerId, data.getInt("battery"))
+                            if (data.has("battery")) {
+                                adapter.updateBattery(wearerId, data.getInt("battery"))
+                            }
+                            if (data.has("bpm")) {
+                                adapter.updateLiveBpm(wearerId, data.getInt("bpm"))
+                            }
                         }
                     }
                 }
@@ -175,11 +191,17 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun fetchUserStatus() {
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser == null) {
+            redirectToLogin()
+            return
+        }
+
         if (!swipeRefresh.isRefreshing) {
             loadingProgress.visibility = View.VISIBLE
         }
 
-        Firebase.auth.currentUser?.getIdToken(false)?.addOnCompleteListener { task ->
+        currentUser.getIdToken(false).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val idToken = task.result.token ?: ""
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { fcmTask ->
@@ -206,19 +228,53 @@ class DashboardActivity : AppCompatActivity() {
                                     }
                                 }
                                 adapter.notifyDataSetChanged()
+                            } else if (response.code() == 401 || response.code() == 403) {
+                                // Backend rejected the token outright - the session is dead.
+                                redirectToLogin()
+                            } else {
+                                Toast.makeText(
+                                    this@DashboardActivity,
+                                    "Couldn't load your data (${response.code()}). Pull to refresh.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         } catch (e: Exception) {
                             loadingProgress.visibility = View.GONE
                             swipeRefresh.isRefreshing = false
                             Log.e("Dashboard", "Sync Error: ${e.message}")
+                            Toast.makeText(
+                                this@DashboardActivity,
+                                "Network error. Pull to refresh.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
             } else {
                 loadingProgress.visibility = View.GONE
                 swipeRefresh.isRefreshing = false
+                val exception = task.exception
+                if (exception is FirebaseAuthInvalidUserException || exception is FirebaseAuthInvalidCredentialsException) {
+                    // Token refresh was explicitly rejected - the session expired or was revoked.
+                    redirectToLogin()
+                } else {
+                    Toast.makeText(
+                        this@DashboardActivity,
+                        "Couldn't verify your session. Pull to refresh.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
+    }
+
+    private fun redirectToLogin() {
+        loadingProgress.visibility = View.GONE
+        swipeRefresh.isRefreshing = false
+        Firebase.auth.signOut()
+        if (::mSocket.isInitialized) mSocket.disconnect()
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
     }
 
     private fun showRenameDialog(item: MonitoredUser) {

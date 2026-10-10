@@ -36,12 +36,12 @@ class HistoryAdapter(
 
         if (alert.resolved) {
             holder.statusText.text = "✅ Alert Resolved"
-            holder.statusText.setTextColor(android.graphics.Color.parseColor("#4CAF50"))
+            holder.statusText.setTextColor(android.graphics.Color.parseColor("#16A34A"))
             holder.resolvedBy.visibility = View.VISIBLE
             holder.resolvedBy.text = "Resolved by: ${alert.resolvedBy?.name ?: "Caregiver"}"
         } else {
             holder.statusText.text = "🚨 Unresolved Fall"
-            holder.statusText.setTextColor(android.graphics.Color.parseColor("#FF5252"))
+            holder.statusText.setTextColor(android.graphics.Color.parseColor("#DC2626"))
             holder.resolvedBy.visibility = View.GONE
         }
 

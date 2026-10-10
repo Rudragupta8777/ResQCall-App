@@ -93,4 +93,6 @@ dependencies {
 
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 }

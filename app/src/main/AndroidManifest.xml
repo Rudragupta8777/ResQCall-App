@@ -41,6 +41,9 @@
             android:name=".HistoryActivity"
             android:exported="false" />
         <activity
+            android:name=".VitalsActivity"
+            android:exported="false" />
+        <activity
             android:name=".ScannerActivity"
             android:exported="false" />
         <activity

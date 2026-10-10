@@ -26,21 +26,32 @@ import kotlinx.coroutines.launch
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
+    private lateinit var credentialManager: CredentialManager
+    private lateinit var signInBtn: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
         auth = Firebase.auth
-        val signInBtn = findViewById<Button>(R.id.googleSignInBtn)
+        // Created upfront (not on tap) since constructing it can take a noticeable beat
+        // the first time Play Services spins up - this way the tap itself is instant.
+        credentialManager = CredentialManager.create(this)
+        signInBtn = findViewById(R.id.googleSignInBtn)
 
         signInBtn.setOnClickListener {
             startGoogleLogin()
         }
     }
 
+    private fun setLoading(loading: Boolean) {
+        signInBtn.isEnabled = !loading
+        signInBtn.alpha = if (loading) 0.6f else 1f
+        signInBtn.text = if (loading) "Signing in…" else "Sign in with Google"
+    }
+
     private fun startGoogleLogin() {
-        val credentialManager = CredentialManager.create(this)
+        setLoading(true)
 
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
@@ -59,6 +70,8 @@ class LoginActivity : AppCompatActivity() {
                 handleSignIn(result.credential)
             } catch (e: Exception) {
                 Log.e("Auth", "Login Failed: ${e.message}")
+                setLoading(false)
+                Toast.makeText(this@LoginActivity, "Sign-in cancelled or failed. Please try again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -81,27 +94,38 @@ class LoginActivity : AppCompatActivity() {
                                 val firebaseIdToken = tokenTask.result.token
                                 if (firebaseIdToken != null) {
                                     syncUserWithBackend(firebaseIdToken)
+                                } else {
+                                    setLoading(false)
                                 }
+                            } else {
+                                setLoading(false)
+                                Toast.makeText(this@LoginActivity, "Couldn't verify your account. Try again.", Toast.LENGTH_SHORT).show()
                             }
                         }
+                    } else {
+                        setLoading(false)
+                        Toast.makeText(this@LoginActivity, "Firebase sign-in failed. Try again.", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 Log.e("Auth", "Error: ${e.message}")
+                setLoading(false)
+                Toast.makeText(this@LoginActivity, "Sign-in failed. Try again.", Toast.LENGTH_SHORT).show()
             }
+        } else {
+            setLoading(false)
         }
     }
 
     private fun syncUserWithBackend(idToken: String) {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            // Don't block login just because the FCM token fetch failed - push notifications
+            // are secondary to being able to sign in at all.
             if (!task.isSuccessful) {
                 Log.w("FCM", "Fetching FCM registration token failed", task.exception)
-                return@addOnCompleteListener
             }
 
             val fcmToken = task.result ?: ""
-            Log.d("FCM_TOKEN", "Token generated: $fcmToken")
-
             val authRequest = AuthRequest(idToken, fcmToken)
 
             lifecycleScope.launch {
@@ -124,8 +148,12 @@ class LoginActivity : AppCompatActivity() {
                             }
                         }
                         finish()
+                    } else {
+                        setLoading(false)
+                        Toast.makeText(this@LoginActivity, "Sync failed (${response.code()}). Please try again.", Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
+                    setLoading(false)
                     Log.e("Auth", "Network Error: ${e.message}")
                     Toast.makeText(this@LoginActivity, "Sync failed. Please check internet.", Toast.LENGTH_SHORT).show()
                 }

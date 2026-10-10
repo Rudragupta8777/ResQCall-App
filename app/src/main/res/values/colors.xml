@@ -2,4 +2,40 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand: teal -->
+    <color name="primary">#0D9488</color>
+    <color name="primary_dark">#0F766E</color>
+    <color name="primary_container">#CCFBF1</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="on_primary_container">#0F766E</color>
+
+    <!-- Accent: amber (battery / warnings) -->
+    <color name="amber">#F59E0B</color>
+    <color name="amber_container">#FEF3C7</color>
+    <color name="on_amber_container">#92400E</color>
+
+    <!-- Emergency / error: red -->
+    <color name="error_red">#DC2626</color>
+    <color name="error_red_dark">#B91C1C</color>
+    <color name="error_container">#FEE2E2</color>
+    <color name="on_error_container">#991B1B</color>
+
+    <!-- Success: green -->
+    <color name="success_green">#16A34A</color>
+    <color name="success_container">#DCFCE7</color>
+    <color name="on_success_container">#166534</color>
+
+    <!-- Neutrals -->
+    <color name="background">#F8FAFC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F1F5F9</color>
+    <color name="outline">#E2E8F0</color>
+    <color name="outline_strong">#CBD5E1</color>
+
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_tertiary">#94A3B8</color>
+    <color name="text_on_dark">#FFFFFF</color>
+    <color name="text_on_dark_secondary">#CBD5E1</color>
 </resources>

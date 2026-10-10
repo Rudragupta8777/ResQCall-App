@@ -28,4 +28,13 @@ interface Api {
 
     @HTTP(method = "DELETE", path = "api/auth/remove-wearer", hasBody = true)
     suspend fun removeWearer(@Body request: RemoveWearerRequest): Response<Unit>
+
+    @GET("api/caregiver/location/{wearerId}")
+    suspend fun getWearerLocation(@Path("wearerId") wearerId: String): Response<LocationResponse>
+
+    @GET("api/caregiver/vitals/{wearerId}")
+    suspend fun getWearerVitals(
+        @Path("wearerId") wearerId: String,
+        @Query("range") range: String
+    ): Response<List<VitalsDay>>
 }

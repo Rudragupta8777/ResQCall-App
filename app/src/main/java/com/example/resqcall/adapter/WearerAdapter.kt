@@ -17,8 +17,13 @@ class WearerAdapter(
     private val onLongClick: (MonitoredUser) -> Unit,
     private val onResolve: (MonitoredUser) -> Unit,
     private val onDirections: (Double, Double) -> Unit,
-    private val onCardClick: (MonitoredUser) -> Unit // Added this parameter
+    private val onCardClick: (MonitoredUser) -> Unit, // Added this parameter
+    private val onVitals: (MonitoredUser) -> Unit
 ) : RecyclerView.Adapter<WearerAdapter.ViewHolder>() {
+
+    // Live BPM pushed in over the socket, keyed by wearerId - purely a display cache,
+    // not part of the MonitoredUser model that comes from the REST sync.
+    private val liveBpm = mutableMapOf<String, Int>()
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val name: TextView = view.findViewById(R.id.wearerName)
@@ -28,6 +33,8 @@ class WearerAdapter(
         val btnResolve: View = view.findViewById(R.id.btnResolve)
         val btnDirections: View = view.findViewById(R.id.btnDirections)
         val card: CardView = view.findViewById(R.id.statusCard)
+        val bpmPill: View = view.findViewById(R.id.bpmPill)
+        val bpmText: TextView = view.findViewById(R.id.bpmText)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -41,14 +48,17 @@ class WearerAdapter(
         holder.name.text = if (!item.nickname.isNullOrEmpty()) item.nickname else item.wearer.name
         holder.battery.text = "${item.wearer.myWearable?.batteryLevel ?: 0}%"
 
+        val bpm = liveBpm[item.wearer._id]
+        holder.bpmText.text = if (bpm != null) "$bpm bpm" else "-- bpm"
+
         // Handle Active Alert UI State
         if (item.activeAlert != null && !item.activeAlert.resolved) {
             holder.emergencyActions.visibility = View.VISIBLE
-            holder.card.setCardBackgroundColor(Color.parseColor("#44FF5252"))
+            holder.card.setCardBackgroundColor(Color.parseColor("#FEE2E2"))
             holder.pulseDot.setBackgroundResource(R.drawable.circle_red)
         } else {
             holder.emergencyActions.visibility = View.GONE
-            holder.card.setCardBackgroundColor(Color.parseColor("#1E1E1E"))
+            holder.card.setCardBackgroundColor(Color.parseColor("#FFFFFF"))
             holder.pulseDot.setBackgroundResource(R.drawable.circle_green)
         }
 
@@ -78,6 +88,8 @@ class WearerAdapter(
                 onDirections(loc.lat, loc.lon)
             }
         }
+
+        holder.bpmPill.setOnClickListener { onVitals(item) }
     }
 
     fun updateBattery(wearerId: String, newLevel: Int) {
@@ -88,6 +100,14 @@ class WearerAdapter(
                 myWearable = currentItem.wearer.myWearable?.copy(batteryLevel = newLevel)
             )
             items[index] = currentItem.copy(wearer = updatedWearer)
+            notifyItemChanged(index)
+        }
+    }
+
+    fun updateLiveBpm(wearerId: String, bpm: Int) {
+        liveBpm[wearerId] = bpm
+        val index = items.indexOfFirst { it.wearer._id == wearerId }
+        if (index != -1) {
             notifyItemChanged(index)
         }
     }
